@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ลงทะเบียนสมาชิก</title>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script> </head>
+<body class="bg-gray-100 p-4">
+
+    <div class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl p-6 mt-10">
+        <h2 class="text-2xl font-bold mb-4 text-center text-green-600">ลงทะเบียนสมาชิก</h2>
+        
+        <form id="registerForm" class="space-y-4">
+            <input type="hidden" id="userId" name="UserID">
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700">ชื่อ-นามสกุล</label>
+                <input type="text" name="Name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2 border">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">เบอร์โทรศัพท์</label>
+                <input type="tel" name="Phone" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2 border">
+            </div>
+
+            <button type="submit" id="submitBtn" class="w-full bg-green-500 text-white font-bold py-2 px-4 rounded hover:bg-green-700 transition duration-300">
+                ยืนยันการลงทะเบียน
+            </button>
+        </form>
+    </div>
+
+    <script>
+        // --- ส่วนตั้งค่า (แก้ไขตรงนี้) ---
+        const LIFF_ID = "2008682159-Yx4GHfgu"; // TODO 1: เอา LIFF ID จากส่วนที่ 2 มาใส่
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzRDs0IJYq_qxPGBFPGVwrpa-kSSZLtjvtccuaWLg2YdYrgdVH3wmGTiKtkx52tvcI/exec";
+        // -----------------------------
+
+        async function main() {
+            await liff.init({ liffId: LIFF_ID });
+            if (!liff.isLoggedIn()) {
+                liff.login();
+                return;
+            }
+            const profile = await liff.getProfile();
+            document.getElementById('userId').value = profile.userId;
+        }
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            btn.innerText = "กำลังบันทึก...";
+            btn.disabled = true;
+
+            const form = e.target;
+            const formData = new FormData(form);
+            
+            try {
+                // ส่งค่าไป Google Sheets
+                await fetch(WEB_APP_URL, { method: 'POST', body: formData });
+                
+                alert("ลงทะเบียนเรียบร้อย!");
+                liff.closeWindow(); // ปิดหน้าต่าง LIFF ทันที
+            } catch (error) {
+                console.error(error);
+                alert("เกิดข้อผิดพลาด กรุณาลองใหม่");
+                btn.innerText = "ยืนยันการลงทะเบียน";
+                btn.disabled = false;
+            }
+        });
+
+        main();
+    </script>
+</body>
+</html>
