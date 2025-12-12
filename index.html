@@ -5,50 +5,87 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ลงทะเบียนสมาชิก</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script> </head>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
 <body class="bg-gray-100 p-4">
 
     <div class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl p-6 mt-10">
         <h2 class="text-2xl font-bold mb-4 text-center text-green-600">ลงทะเบียนสมาชิก</h2>
         
+        <div class="mb-4 p-2 bg-yellow-100 rounded text-xs text-gray-600">
+            สถานะระบบ: <span id="statusText">กำลังโหลด LINE...</span><br>
+            UserID ของคุณ: <span id="userIdDisplay" class="font-bold text-red-500">...รอสักครู่...</span>
+        </div>
+
         <form id="registerForm" class="space-y-4">
             <input type="hidden" id="userId" name="UserID">
             
             <div>
                 <label class="block text-sm font-medium text-gray-700">ชื่อ-นามสกุล</label>
-                <input type="text" name="Name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2 border">
+                <input type="text" name="Name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
             </div>
 
             <div>
                 <label class="block text-sm font-medium text-gray-700">เบอร์โทรศัพท์</label>
-                <input type="tel" name="Phone" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2 border">
+                <input type="tel" name="Phone" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
             </div>
 
-            <button type="submit" id="submitBtn" class="w-full bg-green-500 text-white font-bold py-2 px-4 rounded hover:bg-green-700 transition duration-300">
-                ยืนยันการลงทะเบียน
+            <button type="submit" id="submitBtn" disabled class="w-full bg-gray-400 text-white font-bold py-2 px-4 rounded cursor-not-allowed transition duration-300">
+                รอโหลดข้อมูล LINE...
             </button>
         </form>
     </div>
 
     <script>
-        // --- ส่วนตั้งค่า (แก้ไขตรงนี้) ---
-        const LIFF_ID = "2008682159-Yx4GHfgu"; // TODO 1: เอา LIFF ID จากส่วนที่ 2 มาใส่
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzRDs0IJYq_qxPGBFPGVwrpa-kSSZLtjvtccuaWLg2YdYrgdVH3wmGTiKtkx52tvcI/exec";
-        // -----------------------------
+        // ==========================================
+        // 👇 แก้ไข 2 บรรทัดนี้เหมือนเดิมครับ 👇
+        const LIFF_ID = "ใส่_LIFF_ID_ของคุณที่นี่"; 
+        const WEB_APP_URL = "ใส่_Web_App_URL_ยาวๆ_ที่นี่"; 
+        // ==========================================
 
         async function main() {
-            await liff.init({ liffId: LIFF_ID });
-            if (!liff.isLoggedIn()) {
-                liff.login();
-                return;
+            try {
+                await liff.init({ liffId: LIFF_ID });
+                
+                // 1. เช็คว่า Login หรือยัง
+                if (!liff.isLoggedIn()) {
+                    document.getElementById('statusText').innerText = "ยังไม่ได้ Login, กำลังพาไป...";
+                    liff.login();
+                    return;
+                }
+
+                // 2. ดึงข้อมูล User
+                const profile = await liff.getProfile();
+                const userId = profile.userId;
+
+                // 3. เอาค่าไปใส่ในช่องลับ และโชว์บนจอ
+                document.getElementById('userId').value = userId;
+                document.getElementById('userIdDisplay').innerText = userId; // โชว์ให้เห็นเลย
+                document.getElementById('statusText').innerText = "พร้อมลงทะเบียน ✅";
+
+                // 4. ปลดล็อคปุ่มให้กดได้
+                const btn = document.getElementById('submitBtn');
+                btn.disabled = false;
+                btn.classList.remove('bg-gray-400', 'cursor-not-allowed');
+                btn.classList.add('bg-green-500', 'hover:bg-green-700');
+                btn.innerText = "ยืนยันการลงทะเบียน";
+
+            } catch (err) {
+                document.getElementById('statusText').innerText = "เกิดข้อผิดพลาด: " + err;
+                alert("LIFF Error: " + err);
             }
-            const profile = await liff.getProfile();
-            document.getElementById('userId').value = profile.userId;
         }
 
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('submitBtn');
+            
+            // เช็คครั้งสุดท้ายก่อนส่ง
+            if(!document.getElementById('userId').value) {
+                alert("ไม่พบ UserID! กรุณารีเฟรชหน้าเว็บใหม่");
+                return;
+            }
+
             btn.innerText = "กำลังบันทึก...";
             btn.disabled = true;
 
@@ -56,15 +93,13 @@
             const formData = new FormData(form);
             
             try {
-                // ส่งค่าไป Google Sheets
                 await fetch(WEB_APP_URL, { method: 'POST', body: formData });
-                
-                alert("ลงทะเบียนเรียบร้อย!");
-                liff.closeWindow(); // ปิดหน้าต่าง LIFF ทันที
+                alert("ลงทะเบียนเรียบร้อย! รอแอดมินอนุมัติสักครู่นะครับ");
+                liff.closeWindow(); 
             } catch (error) {
                 console.error(error);
-                alert("เกิดข้อผิดพลาด กรุณาลองใหม่");
-                btn.innerText = "ยืนยันการลงทะเบียน";
+                alert("ส่งข้อมูลไม่สำเร็จ: " + error);
+                btn.innerText = "ลองใหม่อีกครั้ง";
                 btn.disabled = false;
             }
         });
